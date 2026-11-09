@@ -1,85 +1,106 @@
-"""Ejercicio 2 - Modelo de Productos, Excepciones y Persistencia (40 pts)."""
+"""Ejercicio 2 - Modelo de Productos, Excepciones y Persistencia.
+Paso 2.1: StockInvalidoError
+Paso 2.2: DispositivoEcologico
+Paso 2.3: PanelSolar
+"""
 import json
 
-class StockInvalidoError(ValueError):
-    """Se eleva cuando se intenta asignar un stock negativo."""
-    pass
+# Paso 2.1: Diseñar la Excepción Personalizada
+class StockInvalidoError(Exception):
+    """Hereda directamente de Exception."""
+    def __init__(self, mensaje="El stock no puede ser un valor negativo."):
+        super().__init__(mensaje)
 
+# Paso 2.2: Diseñar la Clase Base del Catálogo
 class DispositivoEcologico:
-    """Clase base. Encapsulamiento explícito del stock vía property."""
-    def __init__(self, nombre: str, precio: float, stock: int):
-        self.nombre = nombre.strip()
-        self.precio = float(precio)
-        self._stock = None
-        self.stock = stock  # pasa por el setter validado
+    def __init__(self, id_producto, nombre, precio, stock):
+        # 1. Atributos públicos: asignación directa
+        self.id_producto = id_producto
+        self.nombre = nombre
+        self.precio = precio
+        # 2. Encapsulamiento: variable de respaldo privada inicializada en 0
+        self._stock = 0
+        # Regla de Consistencia: invocar la propiedad para forzar la validación del setter
+        self.stock = stock
 
     @property
-    def stock(self) -> int:
+    def stock(self):
+        """Método de lectura: retorna el valor oculto."""
         return self._stock
 
     @stock.setter
-    def stock(self, valor: int):
-        if not isinstance(valor, int) or isinstance(valor, bool):
-            raise StockInvalidoError(f"El stock debe ser un entero, se recibió {valor!r}")
+    def stock(self, valor):
+        """Método de escritura con validación."""
         if valor < 0:
-            raise StockInvalidoError(f"El stock no puede ser negativo: {valor}")
+            raise StockInvalidoError(
+                f"Stock inválido para '{self.nombre}': se intentó asignar {valor}. "
+                "El stock no puede ser un valor negativo."
+            )
         self._stock = valor
 
-    def ficha_tecnica(self) -> str:
-        return f"{self.nombre} | Precio: ${self.precio:,.2f} | Stock: {self.stock}"
+    # 4. Diseño de la Ficha Técnica Base: retorna un diccionario
+    def generar_ficha_tecnica(self):
+        return {
+            "id_producto": self.id_producto,
+            "nombre": self.nombre,
+            "precio": f"${self.precio:.2f}",
+            "stock": self.stock,
+        }
 
-    def to_dict(self) -> dict:
-        return {"tipo": type(self).__name__, "nombre": self.nombre, "precio": self.precio, "stock": self.stock}
+    def to_dict(self):
+        # Para persistencia en JSON: ficha + tipo
+        d = self.generar_ficha_tecnica()
+        d["tipo"] = type(self).__name__
+        return d
 
     def __repr__(self):
-        return f"{type(self).__name__}(nombre={self.nombre!r}, precio={self.precio}, stock={self.stock})"
+        return f"{type(self).__name__}(id_producto={self.id_producto!r}, nombre={self.nombre!r}, precio={self.precio}, stock={self.stock})"
 
+# Paso 2.3: Diseñar la Subclase Especializada
 class PanelSolar(DispositivoEcologico):
-    """Especialización con atributos propios y polimorfismo en ficha_tecnica."""
-    def __init__(self, nombre: str, precio: float, stock: int, potencia_w: int, eficiencia: float):
-        super().__init__(nombre, precio, stock)
-        self.potencia_w = int(potencia_w)
-        self.eficiencia = float(eficiencia)  # ej. 0.22 = 22%
+    def __init__(self, id_producto, nombre, precio, stock, eficiencia, potencia_w):
+        # Invocar en la primera línea el constructor de la clase superior
+        super().__init__(id_producto, nombre, precio, stock)
+        # Guardar localmente los atributos nuevos
+        self.eficiencia = eficiencia
+        self.potencia_w = potencia_w
 
-    # Polimorfismo: personaliza la ficha
-    def ficha_tecnica(self) -> str:
-        base = super().ficha_tecnica()
-        return f"{base} | Panel Solar {self.potencia_w}W | Eficiencia: {self.eficiencia*100:.1f}%"
-
-    def to_dict(self) -> dict:
-        d = super().to_dict()
-        d.update({"potencia_w": self.potencia_w, "eficiencia": self.eficiencia})
-        return d
+    # Sobrescritura Polimórfica del Reporte
+    def generar_ficha_tecnica(self):
+        ficha_base = super().generar_ficha_tecnica()
+        ficha_base.update({
+            "tipo": "Panel Solar",
+            "potencia_w": self.potencia_w,
+            "eficiencia": self.eficiencia,
+        })
+        return ficha_base
 
 class GestorInventario:
     @staticmethod
-    def guardar_catalogo_json(lista_dispositivos, ruta_archivo: str = "catalogo_ecotech.json") -> str:
+    def guardar_catalogo_json(lista_dispositivos, ruta_archivo="catalogo_ecotech.json"):
         datos = [d.to_dict() for d in lista_dispositivos]
         with open(ruta_archivo, "w", encoding="utf-8") as f:
             json.dump(datos, f, ensure_ascii=False, indent=2)
         return ruta_archivo
 
-    @staticmethod
-    def cargar_catalogo_json(ruta_archivo: str = "catalogo_ecotech.json"):
-        with open(ruta_archivo, encoding="utf-8") as f:
-            return json.load(f)
-
 if __name__ == "__main__":
-    catalogo = []
-    # 1) Captura controlada de StockInvalidoError
+    # Paso 3: Validación General - bloque de objetos
+    panel = PanelSolar("PAN-001", "Panel Solar EcoTech 450W", 189999.0, 25, 0.22, 450)
+    print("Ficha técnica (diccionario expandido polimórficamente):")
+    print(panel.generar_ficha_tecnica())
+
+    # Bloque try-except: intento intencional de asignar stock -5
     try:
-        panel_invalido = PanelSolar("Panel X", 150000, -5, 450, 0.21)
-        catalogo.append(panel_invalido)
+        panel.stock = -5
     except StockInvalidoError as e:
-        print(f"[OK] StockInvalidoError capturado: {e}")
+        print(f"[ADVERTENCIA CONTROLADA] StockInvalidoError capturado: {e}")
+    print(f"Stock final del panel (sin cambios): {panel.stock}")
 
-    # 2) Productos válidos
-    catalogo.append(PanelSolar("Panel Solar EcoTech 450W", 189999.0, 25, 450, 0.22))
-    catalogo.append(PanelSolar("Panel Solar EcoTech 550W", 229999.0, 12, 550, 0.23))
-    catalogo.append(DispositivoEcologico("Termotanque Solar 200L", 320000.0, 8))
-
-    for p in catalogo:
-        print(p.ficha_tecnica())
-
+    # Exportación de productos válidos
+    catalogo = [
+        panel,
+        PanelSolar("PAN-002", "Panel Solar EcoTech 550W", 229999.0, 12, 0.23, 550),
+        DispositivoEcologico("TER-001", "Termotanque Solar 200L", 320000.0, 8),
+    ]
     ruta = GestorInventario.guardar_catalogo_json(catalogo, "catalogo_ecotech.json")
-    print(f"\nExportación exitosa -> {ruta} ({len(catalogo)} productos)")
+    print(f"Exportación exitosa -> {ruta} ({len(catalogo)} productos)")

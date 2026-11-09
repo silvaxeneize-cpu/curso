@@ -1,9 +1,6 @@
 """Ejercicio 3 Punto A - Auditoría con unittest."""
 import unittest
-try:
-    from emisiones import calcular_emisiones_carbono, obtener_metricas_consumo
-except ImportError:
-    from ejercicio_3_auditoria_web.emisiones import calcular_emisiones_carbono, obtener_metricas_consumo
+from emisiones import calcular_emisiones_carbono, obtener_metricas_consumo
 
 class TestCalculoEmisiones(unittest.TestCase):
     def test_valor_nominal_factor_por_defecto(self):

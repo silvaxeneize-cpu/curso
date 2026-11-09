@@ -1,71 +1,74 @@
-"""Ejercicio 1 - Sanitización y Análisis Estadístico de Sensores (20 pts)."""
-import re
-from typing import Any
+"""Ejercicio 1 - Sanitización y Análisis Estadístico de Sensores.
+Paso 1.1: limpiar_registro_sensor
+Paso 1.2: generar_resumen_sensores
+"""
 
+# Paso 1.1: Diseñar la Función de Normalización
 def limpiar_registro_sensor(registro_raw: dict) -> dict:
-    """Normaliza un registro crudo de sensor.
+    """Recibe un diccionario crudo y retorna un nuevo diccionario estandarizado."""
+    # 1. Definición e Inicialización: diccionario vacío, no se muta el original
+    registro_limpio = {}
 
-    - sensor_id: sin espacios sobrantes (strip). Si falta/vacío -> "DESCONOCIDO".
-    - temperatura: float sin sufijos de unidad ("24.5C", " 24,5 °C ", "24.5") -> 24.5
-    - ubicacion: valor por defecto seguro "Sin ubicación" si falta/vacía/None.
-    No muta el diccionario original: retorna uno nuevo.
-    """
-    if not isinstance(registro_raw, dict):
-        raise TypeError("registro_raw debe ser un diccionario")
-
+    # 2. Sanitización del Identificador (sensor_id)
     sensor_id = registro_raw.get("sensor_id", "")
     if sensor_id is None:
         sensor_id = ""
-    sensor_id = str(sensor_id).strip() or "DESCONOCIDO"
+    sensor_id = str(sensor_id).strip()
+    registro_limpio["sensor_id"] = sensor_id
 
-    temp_raw = registro_raw.get("temperatura", 0)
-    temperatura = _parse_temperatura(temp_raw)
+    # 3. Estandarización de la Temperatura (temperatura)
+    temperatura_raw = registro_raw.get("temperatura", 0)
+    if isinstance(temperatura_raw, (int, float)) and not isinstance(temperatura_raw, bool):
+        temperatura = float(temperatura_raw)
+    else:
+        texto = str(temperatura_raw)
+        texto = texto.replace("C", "").replace("c", "").replace("F", "").replace("f", "")
+        texto = texto.replace("°", "").replace(" ", "").replace(",", ".")
+        try:
+            temperatura = float(texto)
+        except ValueError:
+            temperatura = 0.0
+    registro_limpio["temperatura"] = temperatura
 
+    # 4. Tratamiento del Atributo de Ubicación (ubicacion)
     ubicacion = registro_raw.get("ubicacion")
     if ubicacion is None or str(ubicacion).strip() == "":
-        ubicacion = "Sin ubicación"
+        registro_limpio["ubicacion"] = "Área No Asignada"
     else:
-        ubicacion = str(ubicacion).strip()
+        registro_limpio["ubicacion"] = str(ubicacion).strip()
 
-    return {"sensor_id": sensor_id, "temperatura": temperatura, "ubicacion": ubicacion}
+    # 5. Retorno de Datos
+    return registro_limpio
 
-def _parse_temperatura(valor: Any) -> float:
-    if isinstance(valor, (int, float)) and not isinstance(valor, bool):
-        return float(valor)
-    if valor is None or (isinstance(valor, str) and valor.strip() == ""):
-        return 0.0
-    texto = str(valor).strip()
-    # Acepta coma decimal, quita unidades / símbolos: "24,5 °C" -> "24.5"
-    texto = texto.replace(",", ".")
-    match = re.search(r"-?\d+(?:\.\d+)?", texto)
-    if not match:
-        raise ValueError(f"No se pudo interpretar la temperatura: {valor!r}")
-    return float(match.group(0))
 
+# Paso 1.2: Diseñar la Función de Mapeo Estadístico
 def generar_resumen_sensores(lista_sensores_limpios, umbral_temperatura: float):
-    """Retorna (lista_sensores_alerta, promedio_temperatura).
-
-    lista_sensores_alerta: IDs con temperatura > umbral.
-    promedio_temperatura: promedio global, 0.0 si la lista está vacía.
-    """
+    """Retorna una tupla (lista_sensores_alerta, promedio_temperatura)."""
     if not lista_sensores_limpios:
         return ([], 0.0)
-    alerta = [r["sensor_id"] for r in lista_sensores_limpios if r["temperatura"] > umbral_temperatura]
-    promedio = sum(r["temperatura"] for r in lista_sensores_limpios) / len(lista_sensores_limpios)
-    return (alerta, round(promedio, 2))
+    acumulador = 0.0
+    lista_alertas = []
+    for sensor in lista_sensores_limpios:
+        temperatura = sensor["temperatura"]
+        acumulador += temperatura
+        if temperatura > umbral_temperatura:
+            lista_alertas.append(sensor["sensor_id"])
+    promedio = round(acumulador / len(lista_sensores_limpios), 2)
+    return (lista_alertas, promedio)
+
 
 if __name__ == "__main__":
     registros_crudos = [
         {"sensor_id": " SENSOR-001 ", "temperatura": "24.5C", "ubicacion": "Planta Norte"},
         {"sensor_id": "SENSOR-002", "temperatura": "31.2 °C", "ubicacion": "Planta Sur"},
-        {"sensor_id": " SENSOR-003 ", "temperatura": "28.0C"},
-        {"sensor_id": "SENSOR-004", "temperatura": " 35.7C ", "ubicacion": "Planta Norte"},
+        {"sensor_id": " SENSOR-003 ", "temperatura": "28.0C", "ubicacion": ""},
+        {"sensor_id": "SENSOR-004", "temperatura": " 35.0 C ", "ubicacion": "Planta Norte"},
         {"sensor_id": "SENSOR-005", "temperatura": 22.1, "ubicacion": "  Planta Este  "},
+        {"sensor_id": "SENSOR-006", "temperatura": "corrupta", "ubicacion": "Planta Sur"},
     ]
     umbral = 30.0
     limpios = [limpiar_registro_sensor(r) for r in registros_crudos]
     alerta, promedio = generar_resumen_sensores(limpios, umbral)
-
     print("=== ECOTECH SOLUTIONS - Reporte de Sensores ===")
     for r in limpios:
         print(f"{r['sensor_id']:<12} | {r['temperatura']:>5.1f} °C | {r['ubicacion']}")

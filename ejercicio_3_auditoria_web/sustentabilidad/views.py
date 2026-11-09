@@ -1,10 +1,7 @@
 """Ejercicio 3 Punto B - Vista Django."""
 import csv, json, os
 from django.shortcuts import render
-try:
-    from emisiones import obtener_metricas_consumo
-except ImportError:
-    from ejercicio_3_auditoria_web.emisiones import obtener_metricas_consumo
+from emisiones import obtener_metricas_consumo
 
 # Datos de ejemplo realistas (pueden venir de CSV / JSON / diccionario).
 # Para usar un CSV: ver _cargar_desde_csv() abajo.
