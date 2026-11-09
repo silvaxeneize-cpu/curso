@@ -1,0 +1,24 @@
+[
+  {
+    "tipo": "PanelSolar",
+    "nombre": "Panel Solar EcoTech 450W",
+    "precio": 189999.0,
+    "stock": 25,
+    "potencia_w": 450,
+    "eficiencia": 0.22
+  },
+  {
+    "tipo": "PanelSolar",
+    "nombre": "Panel Solar EcoTech 550W",
+    "precio": 229999.0,
+    "stock": 12,
+    "potencia_w": 550,
+    "eficiencia": 0.23
+  },
+  {
+    "tipo": "DispositivoEcologico",
+    "nombre": "Termotanque Solar 200L",
+    "precio": 320000.0,
+    "stock": 8
+  }
+]

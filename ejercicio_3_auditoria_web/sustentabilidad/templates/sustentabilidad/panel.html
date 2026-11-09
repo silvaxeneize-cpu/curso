@@ -1,0 +1,9 @@
+<!DOCTYPE html><html lang="es"><head><meta charset="utf-8"><title>Panel de Sustentabilidad - EcoTech</title></head>
+<body>
+<h1>Panel de Sustentabilidad - EcoTech Solutions</h1>
+<p>Total consumo: {{ total_consumo_kwh }} kWh</p>
+<p>Total emisiones: {{ total_emisiones_kg_co2 }} kg CO2</p>
+<p>Planta de mayor consumo: {{ planta_mayor_consumo }}</p>
+<table border="1"><tr><th>Planta</th><th>Consumo (kWh)</th><th>Emisiones (kg CO2)</th></tr>
+{% for d in detalle %}<tr><td>{{ d.planta }}</td><td>{{ d.consumo_kwh }}</td><td>{{ d.emisiones_kg_co2 }}</td></tr>{% endfor %}
+</table></body></html>
